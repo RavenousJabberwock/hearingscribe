@@ -1,0 +1,70 @@
+{
+  "name": "hearingscribe",
+  "version": "1.0.0",
+  "description": "Local-only hearing transcript generator",
+  "author": "Agency",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "dist-installer": "electron-builder --win --config.win.target=nsis"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "gov.agency.hearingscribe",
+    "productName": "HearingScribe",
+    "files": [
+      "app.html",
+      "main.js",
+      "transcribe.py",
+      "model_paths.json"
+    ],
+    "extraResources": [
+      {
+        "from": "python",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "models/whisper",
+        "to": "models/whisper",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "models/pyannote_flat",
+        "to": "models/pyannote_flat",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "transcribe.py",
+        "to": "."
+      },
+      {
+        "from": "model_paths.json",
+        "to": "."
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "directories": {
+      "output": "C:\\HearingScribeDist"
+    }
+  }
+}

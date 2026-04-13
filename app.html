@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HearingScribe</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0f1117;
+  --surface:   #181c25;
+  --surface2:  #1f2433;
+  --border:    #2a3045;
+  --accent:    #4a7fa5;
+  --accent2:   #5ba88a;
+  --accent-glow: rgba(74,127,165,0.18);
+  --text:      #d8dde8;
+  --text-dim:  #6b7590;
+  --text-mid:  #9aa3bb;
+  --success:   #5ba88a;
+  --warn:      #c8934a;
+  --danger:    #a85b5b;
+  --radius:    10px;
+  --mono:      'Courier New', monospace;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+body {
+  background: var(--bg);
+  font-family: 'Syne', sans-serif;
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── TITLEBAR ── */
+.titlebar {
+  -webkit-app-region: drag;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-icon {
+  width: 22px; height: 22px;
+  background: var(--accent);
+  border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+}
+.brand-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.brand-tag {
+  font-size: 9px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.titlebar-secure {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--accent2);
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.secure-dot {
+  width: 6px; height: 6px;
+  background: var(--accent2);
+  border-radius: 50%;
+  animation: pulse 2.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── MAIN CONTENT ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* background grid lines */
+.main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(74,127,165,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74,127,165,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; width: 100%; max-width: 520px; }
+.screen.active { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── SCREEN 1: DROP ── */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 52px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--accent);
+  background: var(--surface2);
+}
+.drop-zone:hover::before, .drop-zone.dragover::before { opacity: 1; }
+
+.drop-icon {
+  width: 56px; height: 56px;
+  margin: 0 auto 18px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  transition: transform 0.2s;
+}
+.drop-zone:hover .drop-icon { transform: translateY(-3px); }
+
+.drop-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.drop-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+.drop-formats {
+  margin-top: 14px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.fmt-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--surface2);
+}
+#fileInput { display: none; }
+
+.output-row {
+  display: flex;
+  gap: 10px;
+}
+.format-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-mid);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.format-btn:hover { border-color: var(--accent); color: var(--text); }
+.format-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* ── SCREEN 2: PROGRESS ── */
+.file-info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.file-icon {
+  width: 40px; height: 40px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.file-details { flex: 1; min-width: 0; }
+.file-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.step-row:last-child { border-bottom: none; }
+.step-row.active { background: var(--surface2); }
+.step-indicator {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: all 0.3s;
+  font-family: 'DM Mono', monospace;
+}
+.step-row.done .step-indicator {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: #fff;
+}
+.step-row.active .step-indicator {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.step-text { font-size: 13px; flex: 1; }
+.step-row.done .step-text { color: var(--text-dim); }
+.step-row.active .step-text { color: var(--text); font-weight: 600; }
+.step-duration {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.progress-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+.progress-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  letter-spacing: 0.5px;
+}
+.progress-pct {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.progress-track {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  width: 0%;
+  position: relative;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer { 0%,100%{opacity:0} 50%{opacity:1} }
+
+.eta-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.eta-item { text-align: center; }
+.eta-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+.eta-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.log-area {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  height: 70px;
+  overflow: hidden;
+  position: relative;
+}
+.log-area::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 20px;
+  background: linear-gradient(var(--surface), transparent);
+  pointer-events: none;
+}
+.log-lines {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+}
+.log-line {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.log-line.info { color: var(--text-mid); }
+.log-line.ok   { color: var(--accent2); }
+.log-line.warn { color: var(--warn); }
+
+/* ── SCREEN 3: DONE ── */
+.done-card {
+  background: var(--surface);
+  border: 1px solid var(--accent2);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.done-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(91,168,138,0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+.done-icon {
+  width: 64px; height: 64px;
+  background: rgba(91,168,138,0.15);
+  border: 1.5px solid var(--accent2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 20px;
+}
+.done-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.done-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.done-filename {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+}
+.btn {
+  flex: 1;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.5px;
+}
+.btn:hover { background: var(--surface2); border-color: var(--accent); }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn.primary:hover { background: #5a90b8; }
+.btn.ghost { color: var(--text-dim); }
+.btn.ghost:hover { color: var(--text); }
+
+/* ── ERROR STATE ── */
+.error-card {
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: none;
+}
+.error-card.visible { display: block; }
+.error-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--danger);
+  margin-bottom: 6px;
+}
+.error-msg {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── FOOTER ── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 8px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.footer-info {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+.footer-status {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--accent2);
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="titlebar-brand">
+    <div class="brand-icon">⚖</div>
+    <span class="brand-name">HearingScribe</span>
+    <span class="brand-tag">LOCAL ONLY</span>
+  </div>
+  <div class="titlebar-secure">
+    <div class="secure-dot"></div>
+    OFFLINE · NO DATA TRANSMITTED
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SCREEN 1: SELECT FILE -->
+  <div class="screen active" id="screen-drop">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".mp3,.wma,.m4a,.wav,.ogg,.flac">
+      <div class="drop-icon">🎙</div>
+      <div class="drop-title">Drop your audio file here</div>
+      <div class="drop-sub">or click to browse</div>
+      <div class="drop-formats">
+        <span class="fmt-badge">MP3</span>
+        <span class="fmt-badge">M4A</span>
+        <span class="fmt-badge">WMA</span>
+        <span class="fmt-badge">WAV</span>
+        <span class="fmt-badge">FLAC</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Output format</div>
+      <div class="output-row">
+        <button class="format-btn selected" id="btn-docx" onclick="selectFormat('docx')">📄 &nbsp;DOCX</button>
+        <button class="format-btn" id="btn-txt" onclick="selectFormat('txt')">📝 &nbsp;TXT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: PROGRESS -->
+  <div class="screen" id="screen-progress">
+    <div class="file-info-card">
+      <div class="file-icon">🎙</div>
+      <div class="file-details">
+        <div class="file-name" id="prog-filename">—</div>
+        <div class="file-meta" id="prog-filemeta">—</div>
+      </div>
+    </div>
+
+    <div class="steps-list">
+      <div class="step-row" id="step-0">
+        <div class="step-indicator">1</div>
+        <div class="step-text">Loading audio file</div>
+        <div class="step-duration" id="step-0-dur"></div>
+      </div>
+      <div class="step-row" id="step-1">
+        <div class="step-indicator">2</div>
+        <div class="step-text">Transcribing speech to text</div>
+        <div class="step-duration" id="step-1-dur"></div>
+      </div>
+      <div class="step-row" id="step-2">
+        <div class="step-indicator">3</div>
+        <div class="step-text">Identifying speakers</div>
+        <div class="step-duration" id="step-2-dur"></div>
+      </div>
+      <div class="step-row" id="step-3">
+        <div class="step-indicator">4</div>
+        <div class="step-text">Generating transcript document</div>
+        <div class="step-duration" id="step-3-dur"></div>
+      </div>
+    </div>
+
+    <div class="progress-block">
+      <div class="progress-header">
+        <span class="progress-label" id="prog-label">Initializing…</span>
+        <span class="progress-pct" id="prog-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="prog-fill"></div>
+      </div>
+      <div class="eta-row">
+        <div class="eta-item">
+          <div class="eta-val" id="eta-elapsed">0:00</div>
+          <div class="eta-lbl">Elapsed</div>
+        </div>
+        <div class="eta-item">
+          <div class="eta-val" id="eta-remain">—</div>
+          <div class="eta-lbl">Remaining</div>
+        </div>
+        <div class="eta-item">
+          <div class="eta-val" id="eta-speakers">—</div>
+          <div class="eta-lbl">Speakers</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-area">
+      <div class="log-lines" id="log-lines"></div>
+    </div>
+
+    <div class="error-card" id="error-card">
+      <div class="error-title">⚠ Transcription Error</div>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: DONE -->
+  <div class="screen" id="screen-done">
+    <div class="done-card">
+      <div class="done-icon">✓</div>
+      <div class="done-title">Transcript Complete</div>
+      <div class="done-sub">
+        All processing was performed locally.<br>
+        No audio or text was transmitted externally.
+      </div>
+      <div class="done-filename" id="done-filename">—</div>
+    </div>
+    <div class="action-row">
+      <button class="btn primary" onclick="openFile()">Open File</button>
+      <button class="btn" onclick="openFolder()">Open Folder</button>
+      <button class="btn ghost" onclick="reset()">Start Over</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <span class="footer-info">HearingScribe v1.0 · Whisper large-v3 · pyannote.audio</span>
+  <span class="footer-status" id="footer-status">READY</span>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+let selectedFormat = 'docx';
+let selectedFile   = null;
+let outputPath     = null;
+let startTime      = null;
+let elapsedTimer   = null;
+let stepTimes      = {};
+
+// ── Format toggle ──────────────────────────────────────────────────────────
+function selectFormat(fmt) {
+  selectedFormat = fmt;
+  document.getElementById('btn-docx').classList.toggle('selected', fmt === 'docx');
+  document.getElementById('btn-txt').classList.toggle('selected', fmt === 'txt');
+}
+
+// ── Screen switching ───────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ── Drop zone ─────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  const allowed = ['.mp3','.wma','.m4a','.wav','.ogg','.flac'];
+  const ext = '.' + file.name.split('.').pop().toLowerCase();
+  if (!allowed.includes(ext)) {
+    alert('Unsupported file type. Please use MP3, M4A, WMA, WAV, OGG, or FLAC.');
+    return;
+  }
+  selectedFile = file;
+  startTranscription();
+}
+
+// ── Transcription ──────────────────────────────────────────────────────────
+function startTranscription() {
+  showScreen('progress');
+  document.getElementById('footer-status').textContent = 'PROCESSING';
+
+  const fname = selectedFile.name;
+  document.getElementById('prog-filename').textContent = fname;
+  document.getElementById('prog-filemeta').textContent =
+    (selectedFile.size / (1024*1024)).toFixed(1) + ' MB  ·  ' + selectedFormat.toUpperCase() + ' output';
+
+  resetSteps();
+  startTime = Date.now();
+  startElapsedTimer();
+  clearLog();
+
+  ipcRenderer.send('transcribe', {
+    filePath: selectedFile.path,
+    format:   selectedFormat,
+  });
+}
+
+function resetSteps() {
+  for (let i = 0; i < 4; i++) {
+    const row = document.getElementById('step-' + i);
+    row.classList.remove('active', 'done');
+    row.querySelector('.step-indicator').textContent = i + 1;
+    document.getElementById('step-' + i + '-dur').textContent = '';
+  }
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('prog-pct').textContent = '0%';
+  document.getElementById('prog-label').textContent = 'Initializing…';
+  document.getElementById('eta-remain').textContent = '—';
+  document.getElementById('eta-speakers').textContent = '—';
+  document.getElementById('error-card').classList.remove('visible');
+  stepTimes = {};
+}
+
+// ── IPC from main process ──────────────────────────────────────────────────
+ipcRenderer.on('transcribe-progress', (_, data) => {
+  if (data.step !== undefined)  setStep(data.step);
+  if (data.pct  !== undefined)  setPct(data.pct);
+  if (data.log)                 addLog(data.log, data.logType || 'info');
+  if (data.label)               document.getElementById('prog-label').textContent = data.label;
+  if (data.speakers !== undefined) document.getElementById('eta-speakers').textContent = data.speakers;
+  if (data.remain !== undefined)   document.getElementById('eta-remain').textContent = fmtTime(data.remain);
+});
+
+ipcRenderer.on('transcribe-done', (_, data) => {
+  stopElapsedTimer();
+  outputPath = data.outputPath;
+  document.getElementById('done-filename').textContent = data.outputPath;
+  document.getElementById('footer-status').textContent = 'COMPLETE';
+  showScreen('done');
+});
+
+ipcRenderer.on('transcribe-error', (_, data) => {
+  stopElapsedTimer();
+  document.getElementById('error-card').classList.add('visible');
+  document.getElementById('error-msg').textContent = data.message;
+  document.getElementById('footer-status').textContent = 'ERROR';
+  addLog(data.message, 'warn');
+});
+
+// ── Step management ────────────────────────────────────────────────────────
+function setStep(stepIdx) {
+  for (let i = 0; i < 4; i++) {
+    const row = document.getElementById('step-' + i);
+    const ind = row.querySelector('.step-indicator');
+    if (i < stepIdx) {
+      row.classList.remove('active'); row.classList.add('done');
+      ind.textContent = '✓';
+    } else if (i === stepIdx) {
+      row.classList.add('active'); row.classList.remove('done');
+      ind.textContent = i + 1;
+      stepTimes[i] = Date.now();
+    } else {
+      row.classList.remove('active', 'done');
+      ind.textContent = i + 1;
+    }
+    // stamp previous step duration
+    if (i === stepIdx - 1 && stepTimes[i]) {
+      const dur = ((Date.now() - stepTimes[i]) / 1000).toFixed(0);
+      document.getElementById('step-' + i + '-dur').textContent = dur + 's';
+    }
+  }
+}
+
+function setPct(pct) {
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent  = Math.round(pct) + '%';
+}
+
+// ── Log ────────────────────────────────────────────────────────────────────
+function addLog(msg, type) {
+  const container = document.getElementById('log-lines');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + (type || 'info');
+  line.textContent = '› ' + msg;
+  container.prepend(line);
+  while (container.children.length > 12) container.removeChild(container.lastChild);
+}
+function clearLog() { document.getElementById('log-lines').innerHTML = ''; }
+
+// ── Elapsed timer ──────────────────────────────────────────────────────────
+function startElapsedTimer() {
+  elapsedTimer = setInterval(() => {
+    document.getElementById('eta-elapsed').textContent = fmtTime((Date.now() - startTime) / 1000);
+  }, 1000);
+}
+function stopElapsedTimer() { clearInterval(elapsedTimer); }
+
+function fmtTime(secs) {
+  if (!secs || secs < 0) return '—';
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+// ── Done actions ───────────────────────────────────────────────────────────
+function openFile()   { ipcRenderer.send('open-file',   outputPath); }
+function openFolder() { ipcRenderer.send('open-folder', outputPath); }
+function reset() {
+  selectedFile = null; outputPath = null;
+  fileInput.value = '';
+  document.getElementById('footer-status').textContent = 'READY';
+  showScreen('drop');
+}
+</script>
+</body>
+</html>

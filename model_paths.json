@@ -1,0 +1,5 @@
+{
+  "whisper_dir": "C:\\Project\\hearingscribe\\models\\whisper",
+  "pyannote_cache": "C:\\Project\\hearingscribe\\models\\pyannote_cache",
+  "pyannote_flat": "C:\\Project\\hearingscribe\\models\\pyannote_flat"
+}
