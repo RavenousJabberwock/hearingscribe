@@ -10,7 +10,7 @@
     "dist-installer": "electron-builder --win --config.win.target=nsis"
   },
   "devDependencies": {
-    "electron": "^30.0.0",
+    "electron": "^39.8.5",
     "electron-builder": "^24.0.0"
   },
   "build": {
